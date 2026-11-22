@@ -43,7 +43,7 @@ $active = function ($prefixes) use ($here) {
 ?>
 
 <div class="sidebar-nav nav-canvas-thumb">
-  <a class="ih-brand" href="{{ url('/dashboard') }}" aria-label="ICTHospital home"><img src="{{ asset('img/brand/icthospital-logo.svg') }}" alt="ICTHospital"></a>
+  <a class="ih-brand" href="{{ url('/dashboard') }}" aria-label="Star Hospital home"><img src="{{ asset('img/brand/icthospital-logo.svg') }}?v=star" alt="Star Hospital"></a>
   <ul class="nav nav-pills nav-stacked main-menu">
 
     <li class="nav-header">Main</li>
