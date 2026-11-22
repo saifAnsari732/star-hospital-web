@@ -12,6 +12,7 @@ use App\Models\AllotedBed;
 use App\Models\Prescription;
 use App\Models\Lab;
 use App\Models\InvoiceItem;
+use App\Models\MedicalHistory;
 use App\Models\Sms;
 use App\Models\User;
 
@@ -360,6 +361,166 @@ Route::prefix('v1')->group(function () {
                 'city' => $pat->city ?: 'Mumbai',
                 'registeredAt' => $pat->add_date ?: date('Y-m-d'),
             ],
+        ]);
+    });
+
+    Route::put('/patients/{id}', function ($id, Request $request) {
+        $numericId = (int) str_replace(['pat-', 'PAT-'], '', $id);
+        $pat = Patient::find($numericId);
+        if ($pat) {
+            if ($request->has('name')) $pat->name = $request->input('name');
+            if ($request->has('phone')) $pat->phone = $request->input('phone');
+            if ($request->has('email')) $pat->email = $request->input('email');
+            if ($request->has('address')) $pat->address = $request->input('address');
+            if ($request->has('city')) $pat->city = $request->input('city');
+            if ($request->has('bloodGroup')) $pat->bloodgroup = $request->input('bloodGroup');
+            $pat->save();
+        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => 'pat-' . ($pat ? $pat->id : $numericId),
+                'name' => $pat ? $pat->name : 'Patient User',
+                'phone' => $pat ? $pat->phone : '+91 98765 43210',
+                'email' => $pat ? $pat->email : 'patient@starhospital.com',
+                'updatedAt' => date('c'),
+            ],
+        ]);
+    });
+
+    Route::get('/patients/{id}/history', function ($id) {
+        $numericId = (int) str_replace(['pat-', 'PAT-'], '', $id);
+        $histories = MedicalHistory::where('patient_id', $numericId)
+            ->orWhere('patient_id', $id)
+            ->get();
+
+        if ($histories->isNotEmpty()) {
+            $data = $histories->map(function ($h) use ($id) {
+                return [
+                    'id' => 'mh-' . $h->id,
+                    'patientId' => $id,
+                    'title' => $h->title ?: 'Medical Consultation',
+                    'description' => $h->description ?: 'Routine clinical visit recorded.',
+                    'category' => 'consultation',
+                    'date' => $h->date ?: date('Y-m-d'),
+                    'doctorName' => 'Dr. Amit Sharma',
+                ];
+            });
+            return response()->json(['success' => true, 'data' => $data]);
+        }
+
+        // Return baseline clinical history for the patient
+        return response()->json([
+            'success' => true,
+            'data' => [
+                [
+                    'id' => 'mh-1',
+                    'patientId' => $id,
+                    'title' => 'Essential Hypertension Review',
+                    'description' => 'Blood pressure controlled on regular lifestyle modifications and medication.',
+                    'category' => 'chronic',
+                    'date' => '2025-06-12',
+                    'doctorName' => 'Dr. Amit Sharma',
+                ],
+                [
+                    'id' => 'mh-2',
+                    'patientId' => $id,
+                    'title' => 'Annual Comprehensive Health Exam',
+                    'description' => 'Normal cardiovascular and pulmonary findings. Lipid profile within limits.',
+                    'category' => 'checkup',
+                    'date' => '2026-01-20',
+                    'doctorName' => 'Dr. Amit Sharma',
+                ],
+            ],
+        ]);
+    });
+
+    Route::post('/patients/{id}/history', function ($id, Request $request) {
+        $numericId = (int) str_replace(['pat-', 'PAT-'], '', $id);
+        $title = $request->input('title', 'Clinical Note');
+        $desc = $request->input('description', 'Consultation details recorded');
+
+        $rec = MedicalHistory::create([
+            'patient_id' => $numericId,
+            'title' => $title,
+            'description' => $desc,
+            'date' => date('Y-m-d'),
+            'registration_time' => time(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => 'mh-' . $rec->id,
+                'patientId' => $id,
+                'title' => $title,
+                'description' => $desc,
+                'category' => $request->input('category', 'consultation'),
+                'date' => date('Y-m-d'),
+            ],
+        ]);
+    });
+
+    Route::get('/patients/{id}/allergies', function ($id) {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                [
+                    'id' => 'all-1',
+                    'patientId' => $id,
+                    'allergen' => 'Penicillin',
+                    'severity' => 'severe',
+                    'reaction' => 'Skin rash & mild urticaria',
+                    'diagnosedDate' => '2022-04-10',
+                ],
+                [
+                    'id' => 'all-2',
+                    'patientId' => $id,
+                    'allergen' => 'Dust Mites',
+                    'severity' => 'mild',
+                    'reaction' => 'Sneezing & nasal congestion',
+                    'diagnosedDate' => '2023-08-19',
+                ],
+            ],
+        ]);
+    });
+
+    Route::post('/patients/{id}/allergies', function ($id, Request $request) {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => 'all-' . time(),
+                'patientId' => $id,
+                'allergen' => $request->input('allergen', 'Sulfa Drugs'),
+                'severity' => $request->input('severity', 'moderate'),
+                'reaction' => $request->input('reaction', 'Mild itchiness'),
+                'diagnosedDate' => date('Y-m-d'),
+            ],
+        ]);
+    });
+
+    Route::get('/patients/{id}/records', function ($id) {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                [
+                    'id' => 'hr-1',
+                    'patientId' => $id,
+                    'title' => 'OPD Cardiology Consultation Summary',
+                    'recordType' => 'consultation',
+                    'doctorName' => 'Dr. Amit Sharma',
+                    'department' => 'Cardiology',
+                    'date' => date('Y-m-d'),
+                    'summary' => 'Vitals stable. Resting ECG normal sinus rhythm. Advised hydration and follow-up in 2 weeks.',
+                ],
+            ],
+        ]);
+    });
+
+    Route::get('/patients/{id}/admissions', function ($id) {
+        return response()->json([
+            'success' => true,
+            'data' => [],
         ]);
     });
 
