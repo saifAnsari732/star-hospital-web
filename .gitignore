@@ -23,3 +23,6 @@ yarn-error.log
 /storage/logs/*.log
 /storage/oauth-private.key
 /storage/oauth-public.key
+
+# Nested mobile app repo
+/star-hospital-App/
