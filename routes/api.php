@@ -609,6 +609,119 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
+    Route::post('/opd/queue/{doctorId}/call-next', function ($doctorId, Request $request) {
+        $numericDoctorId = (int) str_replace(['doc-', 'DOC-'], '', $doctorId);
+        $doctor = Doctor::find($numericDoctorId) ?: Doctor::first();
+        $doctorName = $doctor ? $doctor->name : 'Dr. Amit Sharma';
+        $department = $doctor ? ($doctor->department ?: 'General Physician') : 'General Physician';
+
+        $now = date('c');
+        $expiresAt = date('c', time() + 600); // 10-minute limit
+
+        $calledToken = [
+            'id' => 'tok-' . time(),
+            'tokenNumber' => 'A-102',
+            'patientId' => 'pat-1002',
+            'patientName' => 'Ananya Iyer',
+            'doctorId' => $doctorId,
+            'doctorName' => $doctorName,
+            'department' => $department,
+            'servingToken' => 'A-102',
+            'queuePosition' => 1,
+            'estimatedWaitMinutes' => 0,
+            'status' => 'in_consultation',
+            'consultStartedAt' => $now,
+            'expiresAt' => $expiresAt,
+            'consultDurationLimitSeconds' => 600,
+            'generatedAt' => $now,
+            'roomNo' => 'OPD Room 101',
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $calledToken,
+        ]);
+    });
+
+    Route::post('/opd/tokens/{tokenId}/complete', function ($tokenId, Request $request) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Token marked as completed.',
+            'data' => [
+                'tokenId' => $tokenId,
+                'status' => 'completed',
+                'completedAt' => date('c'),
+            ],
+        ]);
+    });
+
+    Route::post('/opd/tokens/generate', function (Request $request) {
+        $patientId = $request->input('patientId', 'pat-1');
+        $doctorId = $request->input('doctorId', 'doc-1');
+
+        $numericDoctorId = (int) str_replace(['doc-', 'DOC-'], '', $doctorId);
+        $doctor = Doctor::find($numericDoctorId) ?: Doctor::first();
+        $doctorName = $doctor ? $doctor->name : 'Dr. Amit Sharma';
+        $department = $doctor ? ($doctor->department ?: 'General Physician') : 'General Physician';
+
+        $tokenNo = rand(103, 120);
+        $token = [
+            'id' => 'tok-' . time(),
+            'tokenNumber' => 'A-' . $tokenNo,
+            'patientId' => $patientId,
+            'patientName' => 'Patient ' . $patientId,
+            'doctorId' => $doctorId,
+            'doctorName' => $doctorName,
+            'department' => $department,
+            'servingToken' => 'A-101',
+            'queuePosition' => 2,
+            'estimatedWaitMinutes' => 20,
+            'status' => 'arrived',
+            'generatedAt' => date('c'),
+            'roomNo' => 'OPD Room 101',
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $token,
+        ]);
+    });
+
+    Route::put('/appointments/{id}/vitals', function ($id, Request $request) {
+        $vitals = $request->input('vitals', []);
+        return response()->json([
+            'success' => true,
+            'message' => 'Vitals recorded successfully.',
+            'data' => [
+                'appointmentId' => $id,
+                'vitals' => $vitals,
+                'updatedAt' => date('c'),
+            ],
+        ]);
+    });
+
+    Route::get('/staff/tasks', function () {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                ['id' => 'tsk-1', 'title' => 'Triage Vitals Check', 'status' => 'pending', 'priority' => 'high'],
+                ['id' => 'tsk-2', 'title' => 'OPD Room 101 Queue Review', 'status' => 'in_progress', 'priority' => 'medium'],
+            ],
+        ]);
+    });
+
+    Route::get('/staff/kpi-metrics', function () {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'totalPatients' => 1250,
+                'todayOpd' => 320,
+                'appointments' => 280,
+                'reports' => 180,
+            ],
+        ]);
+    });
+
     // --- Appointments ---
     Route::get('/appointments', function (Request $request) {
         $doctorId = $request->query('doctorId');
